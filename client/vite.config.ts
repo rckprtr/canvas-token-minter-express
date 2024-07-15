@@ -1,0 +1,28 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) =>{
+          console.log(path, new Date())
+          return path
+        } 
+      },
+    },
+  },
+  plugins: [vue(),
+    nodePolyfills({
+      globals: {
+        Buffer: true
+      },
+      protocolImports: true
+    })
+  ],
+})
