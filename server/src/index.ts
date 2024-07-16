@@ -29,6 +29,7 @@ const uploader = new Uploader(umi);
 
 // Routes
 app.get("/", (req: Request, res: Response) => {
+  console.log("GET /");
   res.send("Express + TypeScript Server 2");
 });
 
