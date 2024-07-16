@@ -28,9 +28,10 @@ const BASE_API_URL = window.location.origin;//import.meta.env.VITE_API_URL;
 
 export const useCreateToken = () => {
 
-  const createToken = async (createToken: CreateToken) => {
+  const createToken = async (createToken: CreateToken, creatorWallet: string) => {
     const connection = new Connection(clusterApiUrl("devnet"));
-    const creatorKey = Keypair.generate();
+
+    const creatorKey = new PublicKey(creatorWallet);
 
     console.log(createToken.image);
 
@@ -46,14 +47,14 @@ export const useCreateToken = () => {
 
     let mintIx = await createTokenInstructions(
       connection,
-      creatorKey.publicKey,
+      creatorKey,
       mint.publicKey,
       createToken,
       metadataResults.metadata
     );
-    let vtx = await buildVersionedTx(connection, creatorKey.publicKey, mintIx);
+    let vtx = await buildVersionedTx(connection, creatorKey, mintIx);
 
-    vtx.sign([creatorKey, mint]);
+    vtx.sign([mint]);
 
     try {
       // let sig = await connection.sendTransaction(vtx);
@@ -237,7 +238,7 @@ export const useCreateToken = () => {
     formData.append("metadata", JSON.stringify(metadata));
 
     const response = await fetch(`${BASE_API_URL}/api/upload`, {
-      method: "POST",
+      method: "post",
       body: formData,
     });
 

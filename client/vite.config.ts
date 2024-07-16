@@ -8,12 +8,17 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true,
+        changeOrigin: false,
+
         secure: false,
-        rewrite: (path) =>{
-          console.log(path, new Date())
+        rewrite: (path) => {
+          console.log(path, new Date());
           return path
-        } 
+        },
+        bypass(req) {
+          console.log('bypass', req.method, req.url, new Date());
+          return null;
+        }
       },
     },
   },

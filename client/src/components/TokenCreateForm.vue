@@ -4,7 +4,7 @@ import { CreateToken } from "../types";
 import { useCreateToken } from "../composables/use-create-token";
 import { CanvasClient } from '@dscvr-one/canvas-client-sdk'
 
-//const chainId = 'solana:101'
+const chainId = 'solana:101'
 let canvasClient: CanvasClient | undefined
 
 const form = ref<CreateToken>({
@@ -42,7 +42,7 @@ onMounted(() => {
 const handleImageUpload = (event: any) => {
   const file = event.target.files[0];
   if (!file.type.startsWith("image/")) {
-    imageError.value = "The file must be an image.";
+    imageError.value = "The file must be an image!.";
     return;
   }
 
@@ -65,17 +65,17 @@ const handleImageUpload = (event: any) => {
 const submitCreateToken = async () => {
   isLoading.value = true
 
-  // const response = await canvasClient?.connectWallet(chainId)
-  // console.log('Wallet connected:', response)
+  const response = await canvasClient?.connectWallet(chainId)
+  console.log('Wallet connected:', response)
 
-  await createToken(form.value);
+  await createToken(form.value, response.untrusted.address);
   isLoading.value = false
 };
 </script>
 
 <template>
   <div class="max-w-[600px] mx-auto p-4 relative">
-    <h1 class="text-2xl font-bold mb-4 text-center">Solana Token Creator</h1>
+    <h1 class="text-2xl font-bold mb-4 text-center">Solana Token Creator!</h1>
     <form @submit.prevent="submitCreateToken" class="space-y-4">
       <div class="flex w-full gap-4">
         <div class="w-1/2">
