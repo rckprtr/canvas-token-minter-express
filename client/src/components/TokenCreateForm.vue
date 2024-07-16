@@ -94,7 +94,7 @@ const submitCreateToken = async () => {
 
 <template>
   <div class="max-w-[600px] mx-auto p-4 relative">
-    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token Creator!</h1>
+    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token Creator</h1>
     <form @submit.prevent="submitCreateToken" class="space-y-4">
       <div class="flex w-full gap-4">
         <div class="w-1/2">
