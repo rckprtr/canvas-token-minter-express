@@ -23,6 +23,7 @@ const imageError = ref("");
 const imagePreview = ref("");
 const isLoading = ref(false);
 const isReady = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const { createToken } = useCreateToken();
 
@@ -45,8 +46,19 @@ onUnmounted(() => {
 
 const handleImageUpload = (event: any) => {
   const file = event.target.files[0];
+
+  // Reset the image field and preview
+  form.value.image = null;
+  imagePreview.value = "";
+
+  if (!file) {
+    imageError.value = "";
+    return;
+  }
+
   if (!file.type.startsWith("image/")) {
     imageError.value = "The file must be an image!.";
+    if (fileInput.value) fileInput.value.value = ''; // Clear the file input
     return;
   }
 
@@ -54,6 +66,7 @@ const handleImageUpload = (event: any) => {
   img.onload = () => {
     if (img.width > 512 || img.height > 512) {
       imageError.value = "The image dimensions must not exceed 512x512 pixels.";
+      if (fileInput.value) fileInput.value.value = ''; // Clear the file input
     } else {
       form.value.image = file;
       imageError.value = "";
@@ -61,6 +74,7 @@ const handleImageUpload = (event: any) => {
   };
   img.onerror = () => {
     imageError.value = "Invalid image file.";
+    if (fileInput.value) fileInput.value.value = ''; // Clear the file input
   };
   img.src = URL.createObjectURL(file);
   imagePreview.value = img.src;
@@ -107,6 +121,7 @@ const submitCreateToken = async () => {
               v-model="form.name"
               required
               class="w-full input input-bordered"
+              tabindex="0"
             />
           </div>
 
@@ -122,6 +137,7 @@ const submitCreateToken = async () => {
               required
               type="number"
               class="w-full input input-bordered"
+              tabindex="2"
             />
           </div>
         </div>
@@ -136,6 +152,7 @@ const submitCreateToken = async () => {
               v-model="form.symbol"
               required
               class="w-full input input-bordered"
+              tabindex="1"
             />
           </div>
 
@@ -150,6 +167,7 @@ const submitCreateToken = async () => {
               required
               type="number"
               class="w-full input input-bordered"
+              tabindex="3"
             />
           </div>
         </div>
@@ -160,9 +178,12 @@ const submitCreateToken = async () => {
         </div>
         <input
           id="image"
+          ref="fileInput"
           type="file"
           @change="handleImageUpload"
           class="block w-full mt-1 file-input"
+          tabindex="4"
+          required
         />
         <p v-if="imageError" class="mt-1 text-sm text-red-500">
           {{ imageError }}
@@ -179,6 +200,7 @@ const submitCreateToken = async () => {
           v-model="form.description"
           required
           class="w-full h-24 textarea textarea-bordered"
+          tabindex="5"
         ></textarea>
       </div>
 
