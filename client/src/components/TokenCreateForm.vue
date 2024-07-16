@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { CreateToken } from "../types";
 import { useCreateToken } from "../composables/use-create-token";
-import { CanvasClient } from '@dscvr-one/canvas-client-sdk'
+import { CanvasClient } from "@dscvr-one/canvas-client-sdk";
 
-const chainId = 'solana:101'
-let canvasClient: CanvasClient | undefined
+const chainId = "solana:101";
+let canvasClient: CanvasClient | undefined;
 
 const form = ref<CreateToken>({
   name: "",
@@ -21,23 +21,27 @@ const form = ref<CreateToken>({
 
 const imageError = ref("");
 const imagePreview = ref("");
-const isLoading = ref(false)
-const isReady = ref(false)
+const isLoading = ref(false);
+const isReady = ref(false);
 
 const { createToken } = useCreateToken();
 
 const start = async () => {
-  if (!canvasClient) return
-  await canvasClient.ready()
-  isReady.value = canvasClient.isReady
-
-  
-}
+  if (!canvasClient) return;
+  await canvasClient.ready();
+  isReady.value = canvasClient.isReady;
+};
 
 onMounted(() => {
-  canvasClient = new CanvasClient()
-  start()
-})
+  canvasClient = new CanvasClient();
+  start();
+});
+
+onUnmounted(() => {
+  if (canvasClient) {
+    canvasClient.destroy();
+  }
+});
 
 const handleImageUpload = (event: any) => {
   const file = event.target.files[0];
@@ -63,19 +67,34 @@ const handleImageUpload = (event: any) => {
 };
 
 const submitCreateToken = async () => {
-  isLoading.value = true
+  isLoading.value = true;
 
-  const response = await canvasClient?.connectWallet(chainId)
-  console.log('Wallet connected:', response)
+  const response = await canvasClient?.connectWallet(chainId);
 
-  await createToken(form.value, response.untrusted.address);
-  isLoading.value = false
+  if (response.untrusted.success == false) {
+    isLoading.value = false;
+    console.error("Failed to connect wallet", response.untrusted?.error);
+    return;
+  }
+
+  const vtx = await createToken(form.value, response.untrusted.address);
+  const signedTx = await canvasClient!.signAndSendTransaction({
+    chainId,
+    unsignedTx: vtx,
+  });
+
+  if (signedTx.untrusted.success) {
+    console.log("Token created successfully!", signedTx.untrusted);
+  } else if (signedTx.untrusted.success === false) {
+    console.error("Failed to create token", signedTx.untrusted.error);
+  }
+  isLoading.value = false;
 };
 </script>
 
 <template>
   <div class="max-w-[600px] mx-auto p-4 relative">
-    <h1 class="text-2xl font-bold mb-4 text-center">Solana Token Creator!</h1>
+    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token Creator!</h1>
     <form @submit.prevent="submitCreateToken" class="space-y-4">
       <div class="flex w-full gap-4">
         <div class="w-1/2">
@@ -87,7 +106,7 @@ const submitCreateToken = async () => {
               id="name"
               v-model="form.name"
               required
-              class="input input-bordered w-full"
+              class="w-full input input-bordered"
             />
           </div>
 
@@ -102,12 +121,11 @@ const submitCreateToken = async () => {
               v-model="form.decimals"
               required
               type="number"
-              class="input input-bordered w-full"
+              class="w-full input input-bordered"
             />
           </div>
         </div>
         <div class="w-1/2">
-
           <div class="form-control">
             <div class="label">
               <label for="symbol" class="label-text">Symbol:</label>
@@ -117,10 +135,9 @@ const submitCreateToken = async () => {
               :maxlength="32"
               v-model="form.symbol"
               required
-              class="input input-bordered w-full"
+              class="w-full input input-bordered"
             />
           </div>
-        
 
           <div class="form-control">
             <div class="label">
@@ -132,7 +149,7 @@ const submitCreateToken = async () => {
               v-model="form.supply"
               required
               type="number"
-              class="input input-bordered w-full"
+              class="w-full input input-bordered"
             />
           </div>
         </div>
@@ -145,12 +162,12 @@ const submitCreateToken = async () => {
           id="image"
           type="file"
           @change="handleImageUpload"
-          class="mt-1 block w-full file-input"
+          class="block w-full mt-1 file-input"
         />
-        <p v-if="imageError" class="text-red-500 text-sm mt-1">
+        <p v-if="imageError" class="mt-1 text-sm text-red-500">
           {{ imageError }}
         </p>
-        <img v-if="imagePreview" :src="imagePreview" class="mt-2 w-24 h-24" />
+        <img v-if="imagePreview" :src="imagePreview" class="w-24 h-24 mt-2" />
       </div>
 
       <div class="form-control">
@@ -161,11 +178,11 @@ const submitCreateToken = async () => {
           id="description"
           v-model="form.description"
           required
-          class="textarea textarea-bordered h-24 w-full"
+          class="w-full h-24 textarea textarea-bordered"
         ></textarea>
       </div>
 
-      <div class="form-control space-y-2">
+      <div class="space-y-2 form-control">
         <label class="label-text">Revoke Authorities</label>
 
         <div class="flex items-center">
@@ -198,9 +215,14 @@ const submitCreateToken = async () => {
 
       <button type="submit" class="w-full btn btn-primary">Create Token</button>
     </form>
-    <div v-if="isLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 bg-opacity-50">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-t-4 border-indigo-600 mb-4"></div>
-      <p class="text-black font-medium mt-2 animate-pulse">Creating token...</p>
+    <div
+      v-if="isLoading"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 bg-opacity-50"
+    >
+      <div
+        class="w-12 h-12 mb-4 border-t-4 border-b-4 border-indigo-600 rounded-full animate-spin"
+      ></div>
+      <p class="mt-2 font-medium text-black animate-pulse">Creating token...</p>
     </div>
   </div>
 </template>

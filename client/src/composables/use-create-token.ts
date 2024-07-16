@@ -15,13 +15,12 @@ import {
   SystemProgram,
   Transaction,
   PublicKey,
-  clusterApiUrl,
   Keypair,
   VersionedTransaction,
   TransactionMessage,
-  SendTransactionError,
 } from "@solana/web3.js";
 import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
+import * as bs58 from 'bs58'
 
 const BASE_API_URL = window.location.origin;//import.meta.env.VITE_API_URL;
 
@@ -29,19 +28,14 @@ const BASE_API_URL = window.location.origin;//import.meta.env.VITE_API_URL;
 export const useCreateToken = () => {
 
   const createToken = async (createToken: CreateToken, creatorWallet: string) => {
-    const connection = new Connection(clusterApiUrl("devnet"));
-
+    const connection = new Connection(import.meta.env.VITE_RPC_URL);
     const creatorKey = new PublicKey(creatorWallet);
-
-    console.log(createToken.image);
 
     let metadataResults = await uploadData(createToken.image, {
       name: createToken.name,
       symbol: createToken.symbol,
       description: createToken.description,
     });
-
-    console.log(metadataResults);
 
     let mint = Keypair.generate();
 
@@ -56,16 +50,7 @@ export const useCreateToken = () => {
 
     vtx.sign([mint]);
 
-    try {
-      // let sig = await connection.sendTransaction(vtx);
-      // console.log(sig);
-      // console.log(`https://solscan.io/tx/${sig}?cluster=devnet`);
-    } catch (e) {
-      console.log(e instanceof SendTransactionError);
-      if (e instanceof SendTransactionError) {
-        console.log(e.transactionError);
-      }
-    }
+    return bs58.encode(vtx.serialize());
   };
 
   const createTokenInstructions = async (
