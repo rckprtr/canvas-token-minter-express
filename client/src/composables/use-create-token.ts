@@ -18,6 +18,7 @@ import {
   Keypair,
   VersionedTransaction,
   TransactionMessage,
+  clusterApiUrl,
 } from "@solana/web3.js";
 import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import * as bs58 from 'bs58'
@@ -28,7 +29,7 @@ const BASE_API_URL = window.location.origin;//import.meta.env.VITE_API_URL;
 export const useCreateToken = () => {
 
   const createToken = async (createToken: CreateToken, creatorWallet: string) => {
-    const connection = new Connection(import.meta.env.VITE_RPC_URL);
+    const connection = new Connection(import.meta.env.VITE_RPC_URL || clusterApiUrl("devnet"));
     const creatorKey = new PublicKey(creatorWallet);
 
     let metadataResults = await uploadData(createToken.image, {
