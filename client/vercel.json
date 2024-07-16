@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "https://canvas-token-minter-server.vercel.app/$1"
+            "destination": "https://canvas-token-minter-server.vercel.app/api/$1"
         },
         {
             "source": "/(.*)",
