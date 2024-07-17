@@ -42,12 +42,12 @@ onUnmounted(() => {
 })
 
 const toastClasses = computed(() => {
-  const baseClasses = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md text-white text-base z-50 transition-opacity duration-300'
+  const baseClasses = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md text-black text-base z-50 transition-opacity duration-300'
   const typeClasses = {
-    info: 'bg-blue-500',
-    success: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    error: 'bg-red-500'
+    info: 'bg-info',
+    success: 'bg-success',
+    warning: 'bg-warning',
+    error: 'bg-error'
   }
   return `${baseClasses} ${typeClasses[props.toast.type]}`
 })
