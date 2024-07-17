@@ -136,16 +136,17 @@ const submitCreateToken = async () => {
     return;
   }
 
-  const signedTx = await canvasClient!.signAndSendTransaction({
+  const signedTxResults = await canvasClient!.signAndSendTransaction({
     chainId,
     unsignedTx: createTokenResult.transaction,
   });
 
-  if (signedTx.untrusted.success) {
-    console.log("Token created successfully!", signedTx.untrusted);
+  if (signedTxResults.untrusted.success) {
+    signedTx.value = signedTxResults.untrusted.signedTx;
+    console.log("Token created successfully!", signedTxResults.untrusted);
     triggerToast("Token created successfully!", "success");
-  } else if (signedTx.untrusted.success === false) {
-    console.error("Failed to create token", signedTx.untrusted.error);
+  } else if (signedTxResults.untrusted.success === false) {
+    console.error("Failed to create token", signedTxResults.untrusted.error);
     triggerToast("Failed to create token", "error");
   }
   isLoading.value = false;
