@@ -5,6 +5,9 @@ import helmet from "helmet";
 import multer from "multer";
 import { buildUmi } from "./utils";
 import { Uploader } from "./uploader";
+import { SPLTokenBuilder } from "./token-builder";
+import { Connection } from "@solana/web3.js";
+import { CreateToken } from "./types";
 
 dotenv.config();
 
@@ -38,30 +41,40 @@ app.post(
   upload.single("file"),
   async (req: Request, res: Response) => {
     if (!req.file) {
-      return res.status(400).send("No file uploaded.");
+      return res.send({ message: 'No file uploaded.', success: false });
     }
 
-    let metadata;
+    let createToken: CreateToken;
     try {
-      metadata = JSON.parse(req.body.metadata);
+      createToken = JSON.parse(req.body.metadata) as CreateToken;
     } catch (error) {
-      return res.status(400).json({ error: "Invalid metadata JSON" });
+      return res.send({ message: 'Invalid metadata JSON', success: false });
     }
 
     if (req.file) {
       let imageUrl = await uploader.uploadImage(req.file?.buffer);
 
       let metadataUrl = await uploader.uploadJson({
-        name: metadata.name,
-        symbol: metadata.symbol,
-        description: metadata.description,
+        name: createToken.name,
+        symbol: createToken.symbol,
+        description: createToken.description,
         image: imageUrl,
       });
 
       console.log(metadataUrl);
-      return res.send({ metadata: metadataUrl, success: true });
+
+
+      let tokenBuilder = new SPLTokenBuilder(new Connection(process.env.SOLANA_RPC_URL || ""));
+      let ix = await tokenBuilder.build(
+        createToken,
+        metadataUrl
+      )
+
+      console.log(ix);
+
+      return res.send({ transaction: ix, success: true });
     }
-    return res.send({ success: false });
+    return res.send({ message: 'Failed to mint', success: false });
   }
 );
 

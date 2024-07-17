@@ -10,6 +10,12 @@ export type CreateToken = {
   revokeMint: boolean;
 };
 
+export type CreateTokenResult = {
+  transaction?: string;
+  message?: string;
+  success: boolean;
+};
+
 export type CreateTokenMetadata = {
   name: string;
   symbol: string;
