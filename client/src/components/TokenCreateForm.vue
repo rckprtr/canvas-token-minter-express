@@ -20,6 +20,9 @@ const form = ref<CreateToken>({
   revokeMint: false,
 });
 
+const signedTx = ref<string>(
+  null
+);
 const imageError = ref("");
 const imagePreview = ref("");
 const isLoading = ref(false);
@@ -96,6 +99,21 @@ const triggerToast = (
   showToast.value = true;
 };
 
+const createAnotherToken = () => {
+  form.value = {
+    name: "",
+    symbol: "",
+    decimals: 6,
+    supply: 1,
+    image: null,
+    description: "",
+    revokeUpdate: false,
+    revokeFreeze: false,
+    revokeMint: false,
+  };
+  signedTx.value = "";
+};
+
 const submitCreateToken = async () => {
   isLoading.value = true;
 
@@ -135,143 +153,170 @@ const submitCreateToken = async () => {
 
 <template>
   <div class="max-w-[600px] mx-auto p-4 relative">
-    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token (SPL) Creator</h1>
-    <form @submit.prevent="submitCreateToken" class="space-y-4">
-      <div class="flex w-full gap-4">
-        <div class="w-1/2">
-          <div class="form-control">
-            <div class="label">
-              <label for="name" class="label-text">Name:</label>
-            </div>
-            <input
-              id="name"
-              v-model="form.name"
-              required
-              class="w-full input input-bordered"
-              tabindex="0"
-            />
-          </div>
-
-          <div class="form-control">
-            <div class="label">
-              <label for="decimals" class="label-text">Decimals:</label>
-            </div>
-            <input
-              id="decimals"
-              min="0"
-              max="9"
-              v-model="form.decimals"
-              required
-              type="number"
-              class="w-full input input-bordered"
-              tabindex="2"
-            />
-          </div>
-        </div>
-        <div class="w-1/2">
-          <div class="form-control">
-            <div class="label">
-              <label for="symbol" class="label-text">Symbol:</label>
-            </div>
-            <input
-              id="symbol"
-              :maxlength="32"
-              v-model="form.symbol"
-              required
-              class="w-full input input-bordered"
-              tabindex="1"
-            />
-          </div>
-
-          <div class="form-control">
-            <div class="label">
-              <label for="supply" class="label-text">Supply:</label>
-            </div>
-            <input
-              id="supply"
-              min="1"
-              v-model="form.supply"
-              required
-              type="number"
-              class="w-full input input-bordered"
-              tabindex="3"
-            />
-          </div>
-        </div>
+    <div v-if="signedTx">
+      <h1 class="mb-4 text-2xl font-bold text-center">
+        Token Created Successfully
+      </h1>
+      <div class="text-center">
+        View Transactions here:
+        <a class="underline" :href="`https://solscan.io/tx/${signedTx}`"
+          >Solana Explorer</a
+        >
       </div>
-      <div class="form-control">
-        <div class="label">
-          <label for="image" class="label-text">Image:</label>
+      <p
+        class="p-2 my-2 break-words border rounded-xl bg-slate-800 border-slate-700"
+      >
+        {{ signedTx }}
+      </p>
+      <button @click="createAnotherToken" class="w-full mt-4 btn btn-primary">
+        Create Another Token
+      </button>
+    </div>
+    <div v-else>
+      <h1 class="mb-4 text-2xl font-bold text-center">
+        Solana Token (SPL) Creator
+      </h1>
+      <form @submit.prevent="submitCreateToken" class="space-y-4">
+        <div class="flex w-full gap-4">
+          <div class="w-1/2">
+            <div class="form-control">
+              <div class="label">
+                <label for="name" class="label-text">Name:</label>
+              </div>
+              <input
+                id="name"
+                v-model="form.name"
+                required
+                class="w-full input input-bordered"
+                tabindex="0"
+              />
+            </div>
+
+            <div class="form-control">
+              <div class="label">
+                <label for="decimals" class="label-text">Decimals:</label>
+              </div>
+              <input
+                id="decimals"
+                min="0"
+                max="9"
+                v-model="form.decimals"
+                required
+                type="number"
+                class="w-full input input-bordered"
+                tabindex="2"
+              />
+            </div>
+          </div>
+          <div class="w-1/2">
+            <div class="form-control">
+              <div class="label">
+                <label for="symbol" class="label-text">Symbol:</label>
+              </div>
+              <input
+                id="symbol"
+                :maxlength="32"
+                v-model="form.symbol"
+                required
+                class="w-full input input-bordered"
+                tabindex="1"
+              />
+            </div>
+
+            <div class="form-control">
+              <div class="label">
+                <label for="supply" class="label-text">Supply:</label>
+              </div>
+              <input
+                id="supply"
+                min="1"
+                v-model="form.supply"
+                required
+                type="number"
+                class="w-full input input-bordered"
+                tabindex="3"
+              />
+            </div>
+          </div>
         </div>
-        <input
-          id="image"
-          ref="fileInput"
-          type="file"
-          @change="handleImageUpload"
-          class="block w-full mt-1 file-input"
-          tabindex="4"
-          required
-        />
-        <p v-if="imageError" class="mt-1 text-sm text-red-500">
-          {{ imageError }}
-        </p>
-        <img v-if="imagePreview" :src="imagePreview" class="w-24 h-24 mt-2" />
-      </div>
-
-      <div class="form-control">
-        <div class="label">
-          <span for="description" class="label-text">Description:</span>
-        </div>
-        <textarea
-          id="description"
-          v-model="form.description"
-          required
-          class="w-full h-24 textarea textarea-bordered"
-          tabindex="5"
-        ></textarea>
-      </div>
-
-      <div class="space-y-2 form-control">
-        <label class="label-text">Revoke Authorities</label>
-
-        <div class="flex items-center">
+        <div class="form-control">
+          <div class="label">
+            <label for="image" class="label-text">Image:</label>
+          </div>
           <input
-            type="checkbox"
-            v-model="form.revokeMint"
-            class="mr-2 checkbox checkbox-accent"
+            id="image"
+            ref="fileInput"
+            type="file"
+            @change="handleImageUpload"
+            class="block w-full mt-1 file-input"
+            tabindex="4"
+            required
           />
-          <span>Revoke Mint Authority</span>
+          <p v-if="imageError" class="mt-1 text-sm text-red-500">
+            {{ imageError }}
+          </p>
+          <img v-if="imagePreview" :src="imagePreview" class="w-24 h-24 mt-2" />
         </div>
 
-        <div class="flex items-center">
-          <input
-            type="checkbox"
-            v-model="form.revokeUpdate"
-            class="mr-2 checkbox checkbox-accent"
-          />
-          <span>Revoke Update Authority and make Immutable</span>
+        <div class="form-control">
+          <div class="label">
+            <span for="description" class="label-text">Description:</span>
+          </div>
+          <textarea
+            id="description"
+            v-model="form.description"
+            required
+            class="w-full h-24 textarea textarea-bordered"
+            tabindex="5"
+          ></textarea>
         </div>
 
-        <div class="flex items-center">
-          <input
-            type="checkbox"
-            v-model="form.revokeFreeze"
-            class="mr-2 checkbox checkbox-accent"
-          />
-          <span>Revoke Freeze Authority</span>
-        </div>
-      </div>
+        <div class="space-y-2 form-control">
+          <label class="label-text">Revoke Authorities</label>
 
-      <button type="submit" class="w-full btn btn-primary">Create Token</button>
-    </form>
-    <div
-      v-if="isLoading"
-      class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 bg-opacity-50"
-    >
+          <div class="flex items-center">
+            <input
+              type="checkbox"
+              v-model="form.revokeMint"
+              class="mr-2 checkbox checkbox-accent"
+            />
+            <span>Revoke Mint Authority</span>
+          </div>
+
+          <div class="flex items-center">
+            <input
+              type="checkbox"
+              v-model="form.revokeUpdate"
+              class="mr-2 checkbox checkbox-accent"
+            />
+            <span>Revoke Update Authority and make Immutable</span>
+          </div>
+
+          <div class="flex items-center">
+            <input
+              type="checkbox"
+              v-model="form.revokeFreeze"
+              class="mr-2 checkbox checkbox-accent"
+            />
+            <span>Revoke Freeze Authority</span>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full btn btn-primary">
+          Create Token
+        </button>
+      </form>
       <div
-        class="w-12 h-12 mb-4 border-t-4 border-b-4 border-indigo-600 rounded-full animate-spin"
-      ></div>
-      <p class="mt-2 font-medium text-black animate-pulse">Creating token...</p>
+        v-if="isLoading"
+        class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 bg-opacity-50"
+      >
+        <div
+          class="w-12 h-12 mb-4 border-t-4 border-b-4 border-indigo-600 rounded-full animate-spin"
+        ></div>
+        <p class="mt-2 font-medium text-black animate-pulse">
+          Creating token...
+        </p>
+      </div>
     </div>
   </div>
   <Toast v-if="showToast" :toast="currentToast" @close="showToast = false" />
