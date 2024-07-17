@@ -115,6 +115,7 @@ const createAnotherToken = () => {
 };
 
 const submitCreateToken = async () => {
+
   isLoading.value = true;
 
   const response = await canvasClient?.connectWallet(chainId);
