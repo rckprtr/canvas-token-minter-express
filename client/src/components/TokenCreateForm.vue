@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
+import Toast, { ToastProps } from "./Toast.vue";
 import { CreateToken } from "../types";
 import { useCreateToken } from "../composables/use-create-token";
 import { CanvasClient } from "@dscvr-one/canvas-client-sdk";
@@ -24,6 +25,9 @@ const imagePreview = ref("");
 const isLoading = ref(false);
 const isReady = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+
+const showToast = ref(false);
+const currentToast = ref<ToastProps>({ message: "" });
 
 const { createToken } = useCreateToken();
 
@@ -58,7 +62,7 @@ const handleImageUpload = (event: any) => {
 
   if (!file.type.startsWith("image/")) {
     imageError.value = "The file must be an image!.";
-    if (fileInput.value) fileInput.value.value = ''; // Clear the file input
+    if (fileInput.value) fileInput.value.value = ""; // Clear the file input
     return;
   }
 
@@ -66,7 +70,7 @@ const handleImageUpload = (event: any) => {
   img.onload = () => {
     if (img.width > 512 || img.height > 512) {
       imageError.value = "The image dimensions must not exceed 512x512 pixels.";
-      if (fileInput.value) fileInput.value.value = ''; // Clear the file input
+      if (fileInput.value) fileInput.value.value = ""; // Clear the file input
     } else {
       form.value.image = file;
       imageError.value = "";
@@ -74,10 +78,22 @@ const handleImageUpload = (event: any) => {
   };
   img.onerror = () => {
     imageError.value = "Invalid image file.";
-    if (fileInput.value) fileInput.value.value = ''; // Clear the file input
+    if (fileInput.value) fileInput.value.value = ""; // Clear the file input
   };
   img.src = URL.createObjectURL(file);
   imagePreview.value = img.src;
+};
+
+const triggerToast = (
+  message: string,
+  type: "info" | "warning" | "error" | "success"
+) => {
+  currentToast.value = {
+    message,
+    duration: 5000,
+    type,
+  };
+  showToast.value = true;
 };
 
 const submitCreateToken = async () => {
@@ -91,16 +107,27 @@ const submitCreateToken = async () => {
     return;
   }
 
-  const vtx = await createToken(form.value, response.untrusted.address);
+  const createTokenResult = await createToken(
+    form.value,
+    response.untrusted.address
+  );
+  if (createTokenResult.success === false) {
+    isLoading.value = false;
+    triggerToast(createTokenResult.message, "error");
+    return;
+  }
+
   const signedTx = await canvasClient!.signAndSendTransaction({
     chainId,
-    unsignedTx: vtx,
+    unsignedTx: createTokenResult.transaction,
   });
 
   if (signedTx.untrusted.success) {
     console.log("Token created successfully!", signedTx.untrusted);
+    triggerToast("Token created successfully!", "success");
   } else if (signedTx.untrusted.success === false) {
     console.error("Failed to create token", signedTx.untrusted.error);
+    triggerToast("Failed to create token", "error");
   }
   isLoading.value = false;
 };
@@ -108,7 +135,7 @@ const submitCreateToken = async () => {
 
 <template>
   <div class="max-w-[600px] mx-auto p-4 relative">
-    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token Creator</h1>
+    <h1 class="mb-4 text-2xl font-bold text-center">Solana Token (SPL) Creator</h1>
     <form @submit.prevent="submitCreateToken" class="space-y-4">
       <div class="flex w-full gap-4">
         <div class="w-1/2">
@@ -247,4 +274,5 @@ const submitCreateToken = async () => {
       <p class="mt-2 font-medium text-black animate-pulse">Creating token...</p>
     </div>
   </div>
+  <Toast v-if="showToast" :toast="currentToast" @close="showToast = false" />
 </template>
