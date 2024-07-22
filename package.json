@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
+    "install": "cd server && npm install && cd ../client && npm install",
+    "dev": "pnpm run --parallel /^dev:/",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
     "build": "npm run build:server && npm run build:client",
     "build:server": "cd server && npm install && npm run build",
-    "build:client": "cd client && npm install"
+    "build:client": "cd client && npm install",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:5713"
   },
   "author": "",
   "license": "ISC"

@@ -15,7 +15,7 @@ Token Minter is a project that allows users to mint their own tokens on the Sola
 1. Clone the repository: `git clone https://github.com/rckprtr/canvas-token-minter-express`
 2. Install dependencies: `npm install`
 3. Configure the project: Update the configuration file with your desired settings.
-4. Start the application: `npm start`
+4. Start the application: `npm run dev`
 
 ## Contributing
 
