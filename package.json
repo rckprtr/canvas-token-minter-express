@@ -10,7 +10,7 @@
     "build": "npm run build:server && npm run build:client",
     "build:server": "cd server && npm install && npm run build",
     "build:client": "cd client && npm install",
-    "tunnel": "npx cloudflared tunnel --url http://localhost:5713"
+    "tunnel": "npx cloudflared tunnel --url http://localhost:5175"
   },
   "author": "",
   "license": "ISC"

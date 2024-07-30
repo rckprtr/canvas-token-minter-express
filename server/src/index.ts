@@ -3,10 +3,10 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import multer from "multer";
-import { buildUmi } from "./utils";
+import { buildUmiUploader, keypairFromPrivateKey, sendTransaction } from "./utils";
 import { Uploader } from "./uploader";
-import { SPLTokenBuilder } from "./token-builder";
-import { Connection } from "@solana/web3.js";
+import { SPLTokenBuilder } from "./spl-token-builder";
+import { Connection, Keypair } from "@solana/web3.js";
 import { CreateToken } from "./types";
 
 dotenv.config();
@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const umi = buildUmi(
+const umi = buildUmiUploader(
   process.env.SOLANA_RPC_URL || "",
   process.env.UPLOADER_WALLET_PRIVATE_KEY || ""
 );
@@ -54,6 +54,8 @@ app.post(
     if (req.file) {
       let imageUrl = await uploader.uploadImage(req.file?.buffer);
 
+      console.log(imageUrl);
+
       let metadataUrl = await uploader.uploadJson({
         name: createToken.name,
         symbol: createToken.symbol,
@@ -63,14 +65,12 @@ app.post(
 
       console.log(metadataUrl);
 
-
-      let tokenBuilder = new SPLTokenBuilder(new Connection(process.env.SOLANA_RPC_URL || ""));
+      const connection = new Connection(process.env.SOLANA_RPC_URL || "");
+      let tokenBuilder = new SPLTokenBuilder(connection);
       let ix = await tokenBuilder.build(
         createToken,
         metadataUrl
       )
-
-      console.log(ix);
 
       return res.send({ transaction: ix, success: true });
     }

@@ -9,8 +9,6 @@ export const useCreateToken = () => {
   ) => {
     const { image, ...data } = { ...createToken, creatorWallet };
     let metadataResults = await uploadData(image, data);
-    console.log("metadataResults", metadataResults);
-
     return metadataResults;
   };
 

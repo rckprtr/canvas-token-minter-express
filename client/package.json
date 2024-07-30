@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dscvr-one/canvas-client-sdk": "^1.0.2",
-    "@dscvr-one/canvas-interface": "^1.0.2",
+    "@dscvr-one/canvas-client-sdk": "^1.0.7",
+    "@dscvr-one/canvas-interface": "^1.0.7",
     "vite-plugin-node-polyfills": "^0.22.0",
     "vue": "^3.4.29"
   },

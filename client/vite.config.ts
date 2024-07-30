@@ -17,9 +17,6 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      headers: {
-        "content-security-policy": "connect-src https://*.solana.com;",
-      },
     },
     plugins: [
       vue(),

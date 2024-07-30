@@ -1,4 +1,3 @@
-import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import {
   AuthorityType,
   createAssociatedTokenAccountInstruction,
@@ -21,17 +20,28 @@ import {
 } from "@solana/web3.js";
 import base58 from "bs58";
 import { CreateToken } from "./types";
+import {
+  signerIdentity,
+  Umi,
+} from "@metaplex-foundation/umi";
+import { buildUmi, umiUseNoopSigner } from "./utils";
+import {
+  createMetadataAccountV3
+} from "@metaplex-foundation/mpl-token-metadata";
+import {
+  fromWeb3JsPublicKey,
+  toWeb3JsInstruction,
+} from "@metaplex-foundation/umi-web3js-adapters";
 
 export class SPLTokenBuilder {
   connection: Connection;
+  umi: Umi;
   constructor(connection: Connection) {
     this.connection = connection;
+    this.umi = buildUmi(process.env.SOLANA_RPC_URL || "", []);
   }
 
-  build = async (
-    createToken: CreateToken,
-    metadataUri: string
-  ) => {
+  build = async (createToken: CreateToken, metadataUri: string) => {
     const creatorKey = new PublicKey(createToken.creatorWallet);
 
     let mint = Keypair.generate();
@@ -177,25 +187,23 @@ export class SPLTokenBuilder {
       uses: null,
     };
 
-    const createMetadataAccountInstruction =
-      createCreateMetadataAccountV3Instruction(
-        {
-          metadata: metaDataPDA,
-          mint: mint,
-          mintAuthority: creator,
-          payer: creator,
-          updateAuthority: creator,
-        },
-        {
-          createMetadataAccountArgsV3: {
-            collectionDetails: null,
-            data: metadataData,
-            isMutable: !createToken.revokeUpdate,
-          },
-        }
-      );
+    let creatorNoopSigner = umiUseNoopSigner(creator.toBase58());
+    this.umi.use(signerIdentity(creatorNoopSigner));
 
-    return createMetadataAccountInstruction;
+    let txBuilder = createMetadataAccountV3(this.umi, {
+      metadata: fromWeb3JsPublicKey(metaDataPDA),
+      mint: fromWeb3JsPublicKey(mint),
+      mintAuthority: creatorNoopSigner,
+      payer: creatorNoopSigner,
+      updateAuthority: fromWeb3JsPublicKey(creator),
+      collectionDetails: null,
+      data: metadataData,
+      isMutable: !createToken.revokeUpdate,
+    });
+
+    console.log(txBuilder.getInstructions().length);
+
+    return toWeb3JsInstruction(txBuilder.getInstructions()[0]);
   };
 
   buildVersionedTx = async (
