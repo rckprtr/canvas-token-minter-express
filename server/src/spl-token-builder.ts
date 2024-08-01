@@ -13,11 +13,17 @@ import {
   mplTokenMetadata,
   TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
-import { AuthorityType, setAuthority } from "@metaplex-foundation/mpl-toolbox";
+import {
+  AuthorityType,
+  setAuthority,
+  setComputeUnitPrice,
+} from "@metaplex-foundation/mpl-toolbox";
 
 export class SPLTokenBuilder {
   umi: Umi;
+  rpcUrl: string;
   constructor(rpcUrl: string) {
+    this.rpcUrl = rpcUrl;
     this.umi = buildUmi(rpcUrl, [mplTokenMetadata()]);
   }
 
@@ -42,7 +48,11 @@ export class SPLTokenBuilder {
       tokenOwner: publicKey(createToken.creatorWallet),
       tokenStandard: TokenStandard.Fungible,
       isMutable: !createToken.revokeUpdate,
-    });
+    }).prepend(
+      setComputeUnitPrice(this.umi, {
+        microLamports: 10_000,
+      })
+    );
 
     if (createToken.revokeMint) {
       mintTxBuilder = mintTxBuilder.add(
