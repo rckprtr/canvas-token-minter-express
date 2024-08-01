@@ -5,11 +5,16 @@ import {
   Umi,
   publicKey,
   signerIdentity,
-  UmiPlugin
+  UmiPlugin,
 } from "@metaplex-foundation/umi";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { bundlrUploader } from "@metaplex-foundation/umi-uploader-bundlr";
-import { Connection, Keypair, Signer, VersionedTransaction } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  Signer,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import base58 from "bs58";
 
 export const buildUmiUploader = (rpcUrl: string, secretKey: string): Umi => {
@@ -30,30 +35,29 @@ export const loadUmiKeypair = (umi: Umi, secretKey: Uint8Array) => {
   return umi.use(keypairIdentity(signer));
 };
 
-
 export const buildUmi = (rpcUrl: string, plugins: UmiPlugin[]) => {
   const umi = createUmi(rpcUrl);
   plugins.forEach((plugin) => umi.use(plugin));
   return umi;
-}
+};
 
 export const umiUseNoopSigner = (walletAddress: string) => {
   return createNoopSigner(publicKey(walletAddress));
-}
+};
 
 //Testing
 export const keypairFromPrivateKey = (secretKey: string) => {
   return Keypair.fromSecretKey(Uint8Array.from(base58.decode(secretKey)));
-}
+};
 
 export const sendTransaction = async (
   connection: Connection,
   tx: string,
-  signers: Signer[],
+  signers: Signer[]
 ) => {
   const txUint8Array = base58.decode(tx);
-  let versionedTx = VersionedTransaction.deserialize(txUint8Array)
-  versionedTx.sign(signers)
+  let versionedTx = VersionedTransaction.deserialize(txUint8Array);
+  versionedTx.sign(signers);
   let sig = await connection.sendTransaction(versionedTx);
   console.log("Transaction sent", sig);
   return await getTxDetails(connection, sig);
@@ -76,3 +80,29 @@ export const getTxDetails = async (connection: Connection, sig: string) => {
     commitment: "confirmed",
   });
 };
+
+// priorityLevel "Min", "Low", "Medium", "High", "VeryHigh", "UnsafeMax"
+export async function getPriorityFeeEstimate(
+  rpcUrl: string,
+  priorityLevel: string,
+  serializedTx: string
+) {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "1",
+      method: "getPriorityFeeEstimate",
+      params: [
+        {
+          transaction: serializedTx, // Pass the serialized transaction in Base58
+          options: { priorityLevel: priorityLevel },
+        },
+      ],
+    }),
+  });
+  const data = await response.json();
+  console.log(data);
+  return data;
+}
