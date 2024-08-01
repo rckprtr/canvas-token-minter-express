@@ -5,7 +5,7 @@ import { CreateToken } from "../types";
 import { useCreateToken } from "../composables/use-create-token";
 import { CanvasClient } from "@dscvr-one/canvas-client-sdk";
 
-const chainId = "solana:101";
+const CHAIN_ID = "solana:101";
 let canvasClient: CanvasClient | undefined;
 
 const form = ref<CreateToken>({
@@ -28,6 +28,7 @@ const imagePreview = ref("");
 const isLoading = ref(false);
 const isReady = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+const resizeObserver = new ResizeObserver(() => canvasClient?.resize());
 
 const showToast = ref(false);
 const currentToast = ref<ToastProps>({ message: "" });
@@ -39,17 +40,6 @@ const start = async () => {
   await canvasClient.ready();
   isReady.value = canvasClient.isReady;
 };
-
-onMounted(() => {
-  canvasClient = new CanvasClient();
-  start();
-});
-
-onUnmounted(() => {
-  if (canvasClient) {
-    canvasClient.destroy();
-  }
-});
 
 const handleImageUpload = (event: any) => {
   const file = event.target.files[0];
@@ -112,13 +102,14 @@ const createAnotherToken = () => {
     revokeMint: false,
   };
   signedTx.value = "";
+  imagePreview.value = "";
 };
 
 const submitCreateToken = async () => {
 
   isLoading.value = true;
 
-  const response = await canvasClient?.connectWallet(chainId);
+  const response = await canvasClient?.connectWallet(CHAIN_ID);
 
   if (response.untrusted.success == false) {
     isLoading.value = false;
@@ -137,7 +128,7 @@ const submitCreateToken = async () => {
   }
 
   const signedTxResults = await canvasClient!.signAndSendTransaction({
-    chainId,
+    chainId: CHAIN_ID,
     unsignedTx: createTokenResult.transaction,
   });
 
@@ -151,6 +142,20 @@ const submitCreateToken = async () => {
   }
   isLoading.value = false;
 };
+
+onMounted(() => {
+  canvasClient = new CanvasClient();
+  resizeObserver.observe(document.body);
+  start();
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+  if (canvasClient) {
+    canvasClient.destroy();
+  }
+});
+
 </script>
 
 <template>
