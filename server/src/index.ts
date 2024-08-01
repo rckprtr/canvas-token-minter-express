@@ -3,10 +3,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import multer from "multer";
-import { buildUmiUploader, keypairFromPrivateKey, sendTransaction } from "./utils";
+import { buildUmiUploader } from "./utils";
 import { Uploader } from "./uploader";
 import { SPLTokenBuilder } from "./spl-token-builder";
-import { Connection, Keypair } from "@solana/web3.js";
 import { CreateToken } from "./types";
 
 dotenv.config();
@@ -28,7 +27,6 @@ const umi = buildUmiUploader(
   process.env.UPLOADER_WALLET_PRIVATE_KEY || ""
 );
 const uploader = new Uploader(umi);
-
 
 // Routes
 app.get("/", (req: Request, res: Response) => {
@@ -65,8 +63,7 @@ app.post(
 
       console.log(metadataUrl);
 
-      const connection = new Connection(process.env.SOLANA_RPC_URL || "");
-      let tokenBuilder = new SPLTokenBuilder(connection);
+      let tokenBuilder = new SPLTokenBuilder(process.env.SOLANA_RPC_URL || "");
       let ix = await tokenBuilder.build(
         createToken,
         metadataUrl

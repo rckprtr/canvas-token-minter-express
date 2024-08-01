@@ -13,12 +13,11 @@
   "dependencies": {
     "@metaplex-foundation/js": "^0.20.1",
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
+    "@metaplex-foundation/mpl-toolbox": "^0.9.4",
     "@metaplex-foundation/umi": "^0.9.2",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
     "@metaplex-foundation/umi-uploader-bundlr": "^0.9.2",
     "@metaplex-foundation/umi-web3js-adapters": "^0.9.2",
-    "@solana/spl-token": "^0.4.8",
-    "@solana/web3.js": "^1.95.0",
     "bs58": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

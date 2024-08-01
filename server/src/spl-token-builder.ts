@@ -1,224 +1,73 @@
-import {
-  AuthorityType,
-  createAssociatedTokenAccountInstruction,
-  createInitializeMint2Instruction,
-  createMintToInstruction,
-  createSetAuthorityInstruction,
-  getAssociatedTokenAddressSync,
-  getMinimumBalanceForRentExemptMint,
-  MINT_SIZE,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
 import base58 from "bs58";
 import { CreateToken } from "./types";
 import {
+  percentAmount,
   signerIdentity,
   Umi,
+  publicKey,
+  generateSigner,
 } from "@metaplex-foundation/umi";
 import { buildUmi, umiUseNoopSigner } from "./utils";
 import {
-  createMetadataAccountV3
+  createAndMint,
+  mplTokenMetadata,
+  TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
-import {
-  fromWeb3JsPublicKey,
-  toWeb3JsInstruction,
-} from "@metaplex-foundation/umi-web3js-adapters";
+import { AuthorityType, setAuthority } from "@metaplex-foundation/mpl-toolbox";
 
 export class SPLTokenBuilder {
-  connection: Connection;
   umi: Umi;
-  constructor(connection: Connection) {
-    this.connection = connection;
-    this.umi = buildUmi(process.env.SOLANA_RPC_URL || "", []);
+  constructor(rpcUrl: string) {
+    this.umi = buildUmi(rpcUrl, [mplTokenMetadata()]);
   }
 
   build = async (createToken: CreateToken, metadataUri: string) => {
-    const creatorKey = new PublicKey(createToken.creatorWallet);
+    const mint = generateSigner(this.umi);
 
-    let mint = Keypair.generate();
+    const creatorNoopSigner = umiUseNoopSigner(createToken.creatorWallet);
+    this.umi.use(signerIdentity(creatorNoopSigner));
 
-    let mintIx = await this.createTokenInstructions(
-      creatorKey,
-      mint.publicKey,
-      createToken,
-      metadataUri
-    );
-    let vtx = await this.buildVersionedTx(creatorKey, mintIx);
+    const computedSupply =
+      createToken.supply * Math.pow(10, createToken.decimals);
 
-    vtx.sign([mint]);
-
-    return base58.encode(vtx.serialize());
-  };
-
-  createTokenInstructions = async (
-    creator: PublicKey,
-    mint: PublicKey,
-    createToken: CreateToken,
-    metadataUri: string,
-    tokenProgramId = TOKEN_PROGRAM_ID
-  ) => {
-    const instructions = await this.getMintInstructions(
-      creator,
+    let mintTxBuilder = createAndMint(this.umi, {
       mint,
-      createToken.decimals,
-      tokenProgramId
-    );
-
-    instructions.add(
-      this.getCreateTokenMetadataInstructions(
-        creator,
-        mint,
-        createToken,
-        metadataUri
-      )
-    );
-
-    let creatorAta = getAssociatedTokenAddressSync(
-      mint, // token
-      creator, // owner
-      false,
-      tokenProgramId
-    );
-
-    instructions.add(
-      createAssociatedTokenAccountInstruction(
-        creator,
-        creatorAta,
-        creator,
-        mint,
-        tokenProgramId
-      ),
-      createMintToInstruction(
-        mint,
-        creatorAta,
-        creator,
-        createToken.supply,
-        [],
-        tokenProgramId
-      )
-    );
+      authority: this.umi.identity,
+      name: createToken.name,
+      symbol: createToken.symbol,
+      uri: metadataUri,
+      sellerFeeBasisPoints: percentAmount(0),
+      decimals: createToken.decimals,
+      amount: computedSupply,
+      tokenOwner: publicKey(createToken.creatorWallet),
+      tokenStandard: TokenStandard.Fungible,
+      isMutable: !createToken.revokeUpdate,
+    });
 
     if (createToken.revokeMint) {
-      instructions.add(
-        createSetAuthorityInstruction(
-          mint,
-          creator,
-          AuthorityType.MintTokens,
-          null
-        )
+      mintTxBuilder = mintTxBuilder.add(
+        setAuthority(this.umi, {
+          owned: mint.publicKey,
+          owner: this.umi.identity,
+          newAuthority: null,
+          authorityType: AuthorityType.MintTokens,
+        })
       );
     }
 
     if (createToken.revokeFreeze) {
-      instructions.add(
-        createSetAuthorityInstruction(
-          mint,
-          creator,
-          AuthorityType.FreezeAccount,
-          null
-        )
+      mintTxBuilder = mintTxBuilder.add(
+        setAuthority(this.umi, {
+          owned: mint.publicKey,
+          owner: this.umi.identity,
+          newAuthority: null,
+          authorityType: AuthorityType.FreezeAccount,
+        })
       );
     }
 
-    return instructions;
-  };
+    const tx = await mintTxBuilder.buildAndSign(this.umi);
 
-  getMintInstructions = async (
-    creator: PublicKey,
-    mintAddress: PublicKey,
-    decimals: number,
-    tokenProgramId: PublicKey
-  ) => {
-    const lamports = await getMinimumBalanceForRentExemptMint(this.connection);
-    const transaction = new Transaction().add(
-      SystemProgram.createAccount({
-        fromPubkey: creator,
-        newAccountPubkey: mintAddress,
-        space: MINT_SIZE,
-        lamports,
-        programId: tokenProgramId,
-      }),
-      createInitializeMint2Instruction(
-        mintAddress,
-        decimals,
-        creator,
-        creator,
-        tokenProgramId
-      )
-    );
-    return transaction;
-  };
-
-  getCreateTokenMetadataInstructions = (
-    creator: PublicKey,
-    mint: PublicKey,
-    createToken: CreateToken,
-    metadataUri: string
-  ) => {
-    const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-      "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-    );
-
-    const [metaDataPDA] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mint.toBuffer(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-
-    const metadataData = {
-      name: createToken.name,
-      symbol: createToken.symbol,
-      uri: metadataUri,
-      sellerFeeBasisPoints: 0,
-      creators: null,
-      collection: null,
-      uses: null,
-    };
-
-    let creatorNoopSigner = umiUseNoopSigner(creator.toBase58());
-    this.umi.use(signerIdentity(creatorNoopSigner));
-
-    let txBuilder = createMetadataAccountV3(this.umi, {
-      metadata: fromWeb3JsPublicKey(metaDataPDA),
-      mint: fromWeb3JsPublicKey(mint),
-      mintAuthority: creatorNoopSigner,
-      payer: creatorNoopSigner,
-      updateAuthority: fromWeb3JsPublicKey(creator),
-      collectionDetails: null,
-      data: metadataData,
-      isMutable: !createToken.revokeUpdate,
-    });
-
-    console.log(txBuilder.getInstructions().length);
-
-    return toWeb3JsInstruction(txBuilder.getInstructions()[0]);
-  };
-
-  buildVersionedTx = async (
-    payer: PublicKey,
-    tx: Transaction
-  ): Promise<VersionedTransaction> => {
-    const blockHash = (await this.connection.getLatestBlockhash("finalized"))
-      .blockhash;
-
-    let messageV0 = new TransactionMessage({
-      payerKey: payer,
-      recentBlockhash: blockHash,
-      instructions: tx.instructions,
-    }).compileToV0Message();
-
-    return new VersionedTransaction(messageV0);
+    return base58.encode(this.umi.transactions.serialize(tx));
   };
 }
